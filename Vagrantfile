@@ -15,7 +15,7 @@ Vagrant.configure("2") do |config|
   # `vagrant box outdated`. This is not recommended.
   config.vm.box_check_update = false
 
-  (1..3).each do |i|
+  (1..1).each do |i|
     config.vm.define "node#{i}" do |node|
 
       hostname = "node#{i}"
