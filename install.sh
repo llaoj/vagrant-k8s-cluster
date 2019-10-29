@@ -25,15 +25,17 @@ EOF
 sysctl --system
 
 echo '====install docker===='
-# curl -fsSL https://get.docker.com -o get-docker.sh
-# sh get-docker.sh
-apt-get install -y apt-transport-https ca-certificates curl gnupg-agent software-properties-common
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
-add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
 apt-get update
-apt-get install -y docker-ce docker-ce-cli containerd.io
-# install a specific version <18.06.2~ce~3-0~ubuntu>
-# apt-get install -y docker-ce=18.06.2~ce~3-0~ubuntu docker-ce-cli containerd.io
+apt-get install -y apt-transport-https ca-certificates curl gnupg-agent software-properties-common
+# 官方源
+# curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+# add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+# 阿里云源
+curl -fsSL http://mirrors.aliyun.com/docker-ce/linux/ubuntu/gpg | sudo apt-key add -
+add-apt-repository "deb [arch=amd64] http://mirrors.aliyun.com/docker-ce/linux/ubuntu $(lsb_release -cs) stable"
+apt-get update
+apt-get -y install docker-ce docker-ce-cli containerd.io
+docker version
 
 echo '====add user vagrant to docker group===='
 egrep "^docker" /etc/group >& /dev/null
