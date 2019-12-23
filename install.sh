@@ -9,7 +9,7 @@ cat >> /etc/hosts <<EOF
 192.168.33.103 node3
 EOF
 
-echo '====before install docker===='
+# ====before install docker====
 cat > /etc/modules-load.d/containerd.conf <<EOF
 overlay
 br_netfilter
@@ -23,8 +23,11 @@ net.ipv4.ip_forward = 1
 net.bridge.bridge-nf-call-ip6tables = 1
 EOF
 sysctl --system
+# disable swap
+swapoff -a
+sed -i '/swap/s/^/#/' /etc/fstab
 
-echo '====install docker===='
+# ====install docker====
 apt-get update
 apt-get install -y apt-transport-https ca-certificates curl gnupg-agent software-properties-common
 # 官方源
@@ -45,9 +48,7 @@ then
 fi
 usermod -aG docker vagrant
 
-echo "====set daocloud's registry mirror===="
-# curl -sSL https://get.daocloud.io/daotools/set_mirror.sh | sh -s http://f1361db2.m.daocloud.io
-# Setup daemon.
+# ====set daocloud's registry mirror====
 cat > /etc/docker/daemon.json <<EOF
 {
   "exec-opts": ["native.cgroupdriver=systemd"],
@@ -61,8 +62,8 @@ cat > /etc/docker/daemon.json <<EOF
 EOF
 systemctl daemon-reload
 systemctl restart docker
+systemctl enable docker
 
-echo "====use ali k8s repository===="
 # install k8s by kubeadm
 apt-get update && apt-get install -y apt-transport-https curl
 curl -s https://mirrors.aliyun.com/kubernetes/apt/doc/apt-key.gpg | apt-key add -
@@ -72,24 +73,22 @@ EOF
 apt-get update
 apt-get install -y kubelet kubeadm kubectl
 apt-mark hold kubelet kubeadm kubectl
+systemctl enable kubelet
+systemctl start kubelet
+
+echo "====pull images from aliyun===="
+repo_name="registry.aliyuncs.com/google_containers"
+kubeadm config images pull --image-repository=${repo_name}
+docker image list |grep ${repo_name} |awk '{print "docker tag ",$1":"$2,$1":"$2}' |sed -e "s#${repo_name}#k8s.gcr.io#2" |sh -x
+docker image list
+
 
 if [[ $1 -eq 1 ]]
 then
 	echo "====configure master node===="
-  echo "====pull images from aliyun===="
-  repo_name="registry.aliyuncs.com/google_containers"
-  kubeadm config images pull --image-repository=${repo_name}
-  docker image list |grep ${repo_name} |awk '{print "docker tag ",$1":"$2,$1":"$2}' |sed -e "s#${repo_name}#k8s.gcr.io#2" |sh -x
-  docker image list
-
-  echo "====kubeadm init===="
 	kubeadm init --apiserver-advertise-address=$2 --control-plane-endpoint=$2 --pod-network-cidr='10.244.0.0/16'
-
-  echo "====config kubectl===="
   mkdir -p $HOME/.kube
   cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
-
-  echo "====install flannel===="
   kubectl apply -f /vagrant/kube-flannel.yml
 fi
 
